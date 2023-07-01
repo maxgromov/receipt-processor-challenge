@@ -8,7 +8,7 @@
 docker build -t receipt-processor --build-arg GIT_REPO=https://github.com/maxgromov/receipt-processor-challenge .
 ```
 
-OR if you want work from local repository (clone ropository from github to your local machine) and from root aplication foldelr
+OR if you want work from local repository (clone ropository from github to your local machine) and from root aplication folder
 
 ```
 docker build -t receipt-processor .
@@ -27,6 +27,8 @@ __Advice__: For testing API you might use Postman or curl comands.
 The POST method receives a JSON object as payload and returns the generated _receipt_ID_
 
 The GET method returns the number of points for each _receipt_ID_ received, if one exists.
+
+Sometimes when the app is running in a docker container, no error messages are shown in POSTMAN (this problem doesn't exist locally). I'm trying to solve this problem.
 
 # Receipt Processor
 
