@@ -9,7 +9,7 @@
 docker run -p local_port:app_port receipt-processor
 ```
 
-Where __app_port__  is 8881 and __local_port__ is any free port of your choice.
+Where __app_port__  is 8881 (you can change this if you want, but first of all you have to change port in _config.yaml_) and __local_port__ is any free port of your choice.
 
 Use the methods described below to work with the API.
 
