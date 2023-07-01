@@ -13,7 +13,7 @@ Where __app_port__  is 8881 and __local_port__ is any free port of your choice.
 
 Use the methods described below to work with the API.
 
-_Advice_: For testing API you might use Postman or curl comands.
+__Advice__: For testing API you might use Postman or curl comands.
 
 The POST method receives a JSON object as payload and returns the generated _receipt_ID_
 
