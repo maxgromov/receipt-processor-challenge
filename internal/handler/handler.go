@@ -40,14 +40,14 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 	err := json.Unmarshal(ctx.Request.Body(), &reqData)
 	if err != nil {
 		h.log.Error("parse request body error", err.Error())
-		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 
 	// checking struct for null value, because it might be sent by user
 	if utilities.StructIsEmpty(reqData) {
 		h.log.Error("empty request data")
-		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 		parseDate, err = time.Parse(layoutDate, reqData.PurchaseDate)
 		if err != nil {
 			h.log.Error("parse datetime error ", err.Error())
-			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+			ctx.SetStatusCode(fasthttp.StatusBadRequest)
 			return
 		}
 	}
@@ -65,7 +65,7 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 		parseTime, err = time.Parse(layoutTime, reqData.PurchaseTime)
 		if err != nil {
 			h.log.Error("parse datetime error ", err.Error())
-			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+			ctx.SetStatusCode(fasthttp.StatusBadRequest)
 			return
 		}
 	}
@@ -114,7 +114,7 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 	js, err := json.Marshal(response)
 	if err != nil {
 		h.log.Error(err)
-		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -128,8 +128,8 @@ func (h *Handler) GetPoints(ctx *fasthttp.RequestCtx) {
 
 	receipt, isExist := cache.ReceiptCache[receiptId]
 	if !isExist {
-		h.log.Errorf("receipt not found")
-		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		h.log.Errorf("No receipt found for that id")
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 
@@ -144,7 +144,7 @@ func (h *Handler) GetPoints(ctx *fasthttp.RequestCtx) {
 	js, err := json.Marshal(response)
 	if err != nil {
 		h.log.Error("marshaling json error", err.Error())
-		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 

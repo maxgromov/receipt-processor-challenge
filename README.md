@@ -1,3 +1,24 @@
+# Run application
+1 . Clone ropository from github to your local machine
+
+2 . You need to have a Docker for the next steps. Download from https://www.docker.com/
+
+3 . In Terminal/Bash (macos, linux) OR Comandline/PowerShell (Windows) run the following command:
+
+```
+docker run -p local_port:app_port receipt-processor
+```
+
+Where __app_port__  is 8881 and __local_port__ is any free port of your choice.
+
+Use the methods described below to work with the API.
+
+_Advice_: For testing API you might use Postman or curl comands.
+
+The POST method receives a JSON object as payload and returns the generated _receipt_ID_
+
+The GET method returns the number of points for each _receipt_ID_ received, if one exists.
+
 # Receipt Processor
 
 Build a webservice that fulfils the documented API. The API is described below. A formal definition is provided 

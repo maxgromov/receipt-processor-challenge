@@ -37,7 +37,10 @@ func main() {
 		Handler:        router.Handler,
 		Logger:         log,
 	}
-	log.Infof("server started on port %s", cfg.App.Port)
-	log.Fatal(server.ListenAndServe(":" + cfg.App.Port))
+	go func() {
+		log.Infof("server started on port %s", cfg.App.Port)
+		log.Fatal(server.ListenAndServe(":" + cfg.App.Port))
+	}()
+
 	<-sigChan
 }
