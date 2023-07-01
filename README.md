@@ -6,6 +6,16 @@
 3 . In Terminal/Bash (macos, linux) OR Comandline/PowerShell (Windows) run the following command:
 
 ```
+docker build -t receipt-processor --build-arg GIT_REPO=https://github.com/maxgromov/receipt-processor-challenge .
+```
+
+OR if you want work from local repository
+
+```
+docker build -t receipt-processor .
+```
+AND NEXT 
+```
 docker run --rm -p local_port:app_port receipt-processor
 ```
 
