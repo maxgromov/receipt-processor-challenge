@@ -1,15 +1,14 @@
 # Run application
-1 . Clone ropository from github to your local machine
 
-2 . You need to have a Docker for the next steps. Download from https://www.docker.com/
+1 . You need to have a Docker for the next steps. Download from https://www.docker.com/
 
-3 . In Terminal/Bash (macos, linux) OR Comandline/PowerShell (Windows) run the following command:
+2 . In Terminal/Bash (macos, linux) OR Comandline/PowerShell (Windows) run the following command:
 
 ```
 docker build -t receipt-processor --build-arg GIT_REPO=https://github.com/maxgromov/receipt-processor-challenge .
 ```
 
-OR if you want work from local repository
+OR if you want work from local repository (clone ropository from github to your local machine) and from root aplication foldelr
 
 ```
 docker build -t receipt-processor .
