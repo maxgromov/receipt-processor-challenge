@@ -6,7 +6,7 @@
 3 . In Terminal/Bash (macos, linux) OR Comandline/PowerShell (Windows) run the following command:
 
 ```
-docker run -p local_port:app_port receipt-processor
+docker run --rm -p local_port:app_port receipt-processor
 ```
 
 Where __app_port__  is 8881 (you can change this if you want, but first of all you have to change port in _config.yaml_) and __local_port__ is any free port of your choice.
