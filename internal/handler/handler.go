@@ -40,6 +40,7 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 	err := json.Unmarshal(ctx.Request.Body(), &reqData)
 	if err != nil {
 		h.log.Error("parse request body error", err.Error())
+		ctx.SetBodyString("Incorrect request body")
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -47,6 +48,7 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 	// checking struct for null value, because it might be sent by user
 	if utilities.StructIsEmpty(reqData) {
 		h.log.Error("empty request data")
+		ctx.SetBodyString("Empty request body")
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -56,6 +58,7 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 		parseDate, err = time.Parse(layoutDate, reqData.PurchaseDate)
 		if err != nil {
 			h.log.Error("parse datetime error ", err.Error())
+			ctx.SetBodyString("Date or Time format incorrect")
 			ctx.SetStatusCode(fasthttp.StatusBadRequest)
 			return
 		}
@@ -65,6 +68,7 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 		parseTime, err = time.Parse(layoutTime, reqData.PurchaseTime)
 		if err != nil {
 			h.log.Error("parse datetime error ", err.Error())
+			ctx.SetBodyString("Date or Time format incorrect")
 			ctx.SetStatusCode(fasthttp.StatusBadRequest)
 			return
 		}
@@ -77,6 +81,8 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 			pf, err = strconv.ParseFloat(i.Price, 64)
 			if err != nil {
 				h.log.Error("parse price error ", err.Error())
+				ctx.SetBodyString("Price format incorrect")
+				ctx.SetStatusCode(fasthttp.StatusBadRequest)
 				return
 			}
 		}
@@ -92,6 +98,8 @@ func (h *Handler) ProcessReceipt(ctx *fasthttp.RequestCtx) {
 		t, err = strconv.ParseFloat(reqData.Total, 64)
 		if err != nil {
 			h.log.Error("parse price error", err.Error())
+			ctx.SetBodyString("Price format incorrect")
+			ctx.SetStatusCode(fasthttp.StatusBadRequest)
 			return
 		}
 	}
@@ -129,13 +137,14 @@ func (h *Handler) GetPoints(ctx *fasthttp.RequestCtx) {
 	receipt, isExist := cache.ReceiptCache[receiptId]
 	if !isExist {
 		h.log.Errorf("No receipt found for that id")
+		ctx.SetBodyString("No receipt found for that id")
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 
 	points, err := utilities.CountPoints(receipt)
 	if err != nil {
-		h.log.Error("processing receipt points error")
+		h.log.Error("processing receipt points error", err.Error())
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}

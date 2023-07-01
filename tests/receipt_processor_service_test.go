@@ -2,21 +2,30 @@ package tests
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"receipt-processor-challenge/config"
 	. "receipt-processor-challenge/internal"
+	"receipt-processor-challenge/internal/cache"
+	"receipt-processor-challenge/internal/entity"
 	"receipt-processor-challenge/internal/handler"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 )
 
 var (
-	configPath string
-	log        *logrus.Logger
+	configPath   string
+	log          *logrus.Logger
+	ReceiptCache = make(map[string]*entity.Receipt, 0)
 )
+
+type ReceiptId struct {
+	Id string `json:"id"`
+}
 
 func TestMain(m *testing.M) {
 	flag.StringVar(&configPath, "config", "../config.yaml", "config file path")
@@ -50,66 +59,117 @@ func TestProcessReceipt(t *testing.T) {
 		panic(err)
 	}
 	client := run(cfg)
-	// ctx := context.Background()
 
-	// type expectation struct {
-	// 	out entity.ReceiptResponse
-	// 	err error
-	// }
+	type expectation struct {
+		statusCode int
+	}
 
-	// tests := map[string]struct {
-	// 	in   string
-	// 	want expectation
-	// }{
-	// 	"Sucsess. Full JSON receipt struct": {
-	// 		in: `{
-	// 			"retailer": "M&M Corner Market",
-	// 			"purchaseDate": "2022-03-20",
-	// 			"purchaseTime": "14:33",
-	// 			"items": [
-	// 			  {
-	// 				"shortDescription": "Gatorade",
-	// 				"price": "2.25"
-	// 			  },{
-	// 				"shortDescription": "Gatorade",
-	// 				"price": "2.25"
-	// 			  },{
-	// 				"shortDescription": "Gatorade",
-	// 				"price": "2.25"
-	// 			  },{
-	// 				"shortDescription": "Gatorade",
-	// 				"price": "2.25"
-	// 			  }
-	// 			],
-	// 			"total": "9.00"
-	// 		  }`,
-	// 		want: expectation{
-	// 			out: entity.ReceiptResponse{Id: ""},
-	// 			err: nil,
-	// 		},
-	// 	},
-	// }
+	tests := map[string]struct {
+		in   string
+		want expectation
+	}{
+		"Sucsess. Full JSON receipt struct": {
+			in: `{
+				"retailer": "M&M Corner Market",
+				"purchaseDate": "2022-03-20",
+				"purchaseTime": "14:33",
+				"items": [
+				  {
+					"shortDescription": "Gatorade",
+					"price": "2.25"
+				  },{
+					"shortDescription": "Gatorade",
+					"price": "2.25"
+				  },{
+					"shortDescription": "Gatorade",
+					"price": "2.25"
+				  },{
+					"shortDescription": "Gatorade",
+					"price": "2.25"
+				  }
+				],
+				"total": "9.00"
+			  }`,
+			want: expectation{
+				statusCode: 200,
+			},
+		},
+		"Fail. Empty request body": {
+			in: `{
+			  }`,
+			want: expectation{
+				statusCode: 400,
+			},
+		},
+	}
 
-	// for caseName, testCase := range tests {
-	// 	t.Run(caseName, func(t *testing.T) {
-	// 		resp, err := client.GetEmployeeById(ctx, testCase.id)
-	// 		if err != nil {
-	// 			if testCase.want.err.Error() != err.Error() {
-	// 				t.Errorf("Err -> \nWant: %q\nGot: %q\n", testCase.want.err, err)
-	// 			}
-	// 		} else {
-	// 			if testCase.want.out.Id != resp.FirstName ||
-	// 				testCase.want.out.LastName != resp.LastName ||
-	// 				testCase.want.out.MiddleName != resp.MiddleName {
-	// 				t.Errorf("Out -> \nWant: %q\nGot : %q", testCase.want.out, resp)
-	// 			}
-	// 		}
-	// 	})
-	// }
+	for caseName, testCase := range tests {
+		t.Run(caseName, func(t *testing.T) {
+			response, request := ProcessReciept(testCase.in)
+			defer fasthttp.ReleaseRequest(request)
+			defer fasthttp.ReleaseResponse(response)
 
-	testCases := []string{
-		`{
-		 			"retailer": "M&M Corner Market",
+			request.Header.SetHost(cfg.App.Host + ":" + cfg.App.Port)
+			err = client.Do(request, response)
+			if err != nil {
+				t.Fatalf("response error : %v", err)
+			}
+
+			if response.StatusCode() != testCase.want.statusCode {
+				t.Errorf("Out -> \nWant: %q\nGot : %q , response body %q", testCase.want.statusCode, response.StatusCode(), string(response.Body()))
+			}
+		})
+	}
+}
+
+func ProcessReciept(jsonBody string) (*fasthttp.Response, *fasthttp.Request) {
+	request := fasthttp.AcquireRequest()
+	response := fasthttp.AcquireResponse()
+	request.Header.SetMethod("POST")
+	request.SetRequestURI("/receipts/process")
+	request.SetBody([]byte(jsonBody))
+	return response, request
+}
+
+func GetPoints(id string) (*fasthttp.Response, *fasthttp.Request) {
+	request := fasthttp.AcquireRequest()
+	response := fasthttp.AcquireResponse()
+	request.Header.SetMethod("GET")
+	url := fmt.Sprint("/receipts/", id, "/points")
+	request.SetRequestURI(url)
+	return response, request
+}
+
+func TestProcessReceiptAPI(t *testing.T) {
+
+	cfg, err := config.Setup(configPath)
+	if err != nil {
+		panic(err)
+	}
+	client := run(cfg)
+
+	type expectation struct {
+		PostMethod struct {
+			statusCode int
+		}
+		GetMethod struct {
+			statusCode int
+			points     string
+		}
+	}
+	type testIn struct {
+		receipt string
+		id      string
+	}
+
+	tests := map[string]struct {
+		in   testIn
+		want expectation
+	}{
+		"SUCCSESS CASE_Full JSON receipt struct": {
+			in: testIn{
+				receipt: `{
+					"retailer": "M&M Corner Market",
 					"purchaseDate": "2022-03-20",
 					"purchaseTime": "14:33",
 					"items": [
@@ -129,44 +189,81 @@ func TestProcessReceipt(t *testing.T) {
 					],
 					"total": "9.00"
 				  }`,
-		`{}`,
+			},
+			want: expectation{
+				PostMethod: struct{ statusCode int }{
+					statusCode: 200,
+				},
+				GetMethod: struct {
+					statusCode int
+					points     string
+				}{
+					statusCode: 200,
+					points:     "109",
+				},
+			},
+		},
+		"FAIL CASE_Empty request body": {
+			in: testIn{receipt: `{
+			  }`,
+			},
+			want: expectation{
+				PostMethod: struct{ statusCode int }{
+					statusCode: 400,
+				},
+			},
+		},
+		"FAIL CASE_No receipt with this ID": {
+			in: testIn{id: uuid.New().String()},
+			want: expectation{
+				GetMethod: struct {
+					statusCode int
+					points     string
+				}{
+					statusCode: 400,
+					points:     "",
+				},
+			},
+		},
 	}
 
-	for _, c := range testCases {
-		response, request := processReciept(c)
-		defer fasthttp.ReleaseRequest(request)
-		defer fasthttp.ReleaseResponse(response)
+	for caseName, testCase := range tests {
+		t.Run(caseName, func(t *testing.T) {
 
-		request.Header.SetHost(cfg.App.Host + ":" + cfg.App.Port)
-		err = client.Do(request, response)
-		if err != nil {
-			t.Fatalf("response error : %v", err)
-		}
+			cache := cache.ReceiptCache
 
-		// Checking response code
-		if response.StatusCode() != fasthttp.StatusOK {
-			t.Errorf("Expected status code %d, actual %d", fasthttp.StatusOK, response.StatusCode())
-		}
+			//POST
+			if caseName != "FAIL CASE_No receipt with this ID" {
+				response, request := ProcessReciept(testCase.in.receipt)
+				defer fasthttp.ReleaseRequest(request)
+				defer fasthttp.ReleaseResponse(response)
+				request.Header.SetHost(cfg.App.Host + ":" + cfg.App.Port)
+				err = client.Do(request, response)
+				if err != nil {
+					t.Fatalf("response error : %v", err)
+				}
 
-		// Checking response
-		actualResponse := string(response.Body())
-		if strings.Contains(actualResponse, `{"id":"`) {
-			t.Logf("Actual response '%s'", actualResponse)
-		} else {
-			t.Errorf("Actual response '%s'", actualResponse)
-		}
+				if response.StatusCode() != testCase.want.PostMethod.statusCode {
+					t.Errorf("Out -> \nWant: %q\nGot : %q , response body %q", testCase.want.PostMethod.statusCode, response.StatusCode(), string(response.Body()))
+				}
+			}
+
+			//GET
+			if caseName != "FAIL CASE_Empty request body" {
+				for id, _ := range cache {
+					response, request := GetPoints(id)
+					request.Header.SetHost(cfg.App.Host + ":" + cfg.App.Port)
+					err = client.Do(request, response)
+					if err != nil {
+						t.Fatalf("response error : %v", err)
+					}
+					if response.StatusCode() != testCase.want.GetMethod.statusCode || !strings.Contains(string(response.Body()), testCase.want.GetMethod.points) {
+						t.Errorf("Out -> \nWant: %d\nGot : %d , response body %q", testCase.want.GetMethod.statusCode, response.StatusCode(), string(response.Body()))
+					}
+					t.Log(string(response.Body()))
+					delete(cache, id)
+				}
+			}
+		})
 	}
-
-}
-
-func processReciept(jsonBody string) (*fasthttp.Response, *fasthttp.Request) {
-	request := fasthttp.AcquireRequest()
-	response := fasthttp.AcquireResponse()
-	request.Header.SetMethod("POST")
-	request.SetRequestURI("/receipts/process")
-	request.SetBody([]byte(jsonBody))
-	return response, request
-}
-func TestGetProcessReceipt(t *testing.T) {
-
 }
